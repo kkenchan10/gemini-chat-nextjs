@@ -29,9 +29,9 @@ export async function sendMessageToGemini(
   try {
     const genAI = getGeminiClient();
     
-    // Use Gemini 2.5 Pro with thinking enabled
+    // Use Gemini Pro model
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.0-flash-thinking-exp-01262025',
+      model: 'gemini-pro',
       generationConfig: {
         temperature: 0.7,
         topP: 0.8,
@@ -53,20 +53,9 @@ export async function sendMessageToGemini(
     const response = await result.response;
     const text = response.text();
 
-    // Check if the response contains thinking content
-    let reasoning = '';
-    let cleanResponse = text;
-
-    // Extract thinking content if present (Gemini thinking models include <thinking> tags)
-    const thinkingMatch = text.match(/<thinking>([\s\S]*?)<\/thinking>/);
-    if (thinkingMatch) {
-      reasoning = thinkingMatch[1].trim();
-      cleanResponse = text.replace(/<thinking>[\s\S]*?<\/thinking>/, '').trim();
-    }
-
     return {
-      response: cleanResponse,
-      reasoning: reasoning || undefined
+      response: text,
+      reasoning: undefined  // gemini-pro doesn't have reasoning mode
     };
   } catch (error) {
     console.error('Error calling Gemini API:', error);

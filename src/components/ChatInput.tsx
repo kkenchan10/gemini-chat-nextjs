@@ -45,7 +45,7 @@ export default function ChatInput({ onSendMessage, disabled, loading }: ChatInpu
             onKeyDown={handleKeyDown}
             disabled={disabled || loading}
             placeholder="Type your message... (Shift+Enter for new line)"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none min-h-[48px] max-h-32 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none min-h-[48px] max-h-32 disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 placeholder-gray-500"
             rows={1}
           />
         </div>
