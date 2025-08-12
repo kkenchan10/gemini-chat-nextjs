@@ -26,15 +26,21 @@ export interface GeminiResponse {
 
 export async function sendMessageToGemini(
   message: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   history: ChatMessage[] = []
 ): Promise<GeminiResponse> {
   try {
     const ai = getGeminiClient();
     
+    // Build conversation context from history
+    const conversationContext = history.length > 0 
+      ? history.slice(-10).map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`).join('\n') + '\n'
+      : '';
+    
+    const fullPrompt = conversationContext + `User: ${message}\nAssistant:`;
+    
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: message,
+      contents: fullPrompt,
       config: {
         temperature: 0.7,
         maxOutputTokens: 8192,
@@ -57,6 +63,41 @@ export async function sendMessageToGemini(
     
     const errorMessage = error.message || 'Failed to get response from Gemini';
     throw new Error(`Gemini API Error: ${errorMessage}`);
+  }
+}
+
+export async function* sendMessageToGeminiStream(
+  message: string,
+  history: ChatMessage[] = []
+): AsyncGenerator<string, void, unknown> {
+  try {
+    const ai = getGeminiClient();
+    
+    // Build conversation context from history (last 10 messages)
+    const conversationContext = history.length > 0 
+      ? history.slice(-10).map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`).join('\n') + '\n'
+      : '';
+    
+    const fullPrompt = conversationContext + `User: ${message}\nAssistant:`;
+    
+    const stream = await ai.models.generateContentStream({
+      model: 'gemini-2.5-flash',
+      contents: fullPrompt,
+      config: {
+        temperature: 0.7,
+        maxOutputTokens: 8192,
+      },
+    });
+
+    for await (const chunk of stream) {
+      if (chunk.text) {
+        yield chunk.text;
+      }
+    }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    console.error('Error calling Gemini Streaming API:', error);
+    throw new Error(`Gemini Streaming API Error: ${error.message || 'Unknown error'}`);
   }
 }
 

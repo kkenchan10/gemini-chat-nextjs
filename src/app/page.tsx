@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ChatMessage } from '@/lib/gemini';
 import MessageBubble from '@/components/MessageBubble';
 import ChatInput from '@/components/ChatInput';
-import { LogOut, Trash2, MessageSquare } from 'lucide-react';
+import { LogOut, Trash2, MessageSquare, Plus } from 'lucide-react';
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -29,8 +29,18 @@ export default function ChatPage() {
     setMessages(prev => [...prev, userMessage]);
     setLoading(true);
 
+    // Create placeholder for streaming response
+    const assistantMessageId = Date.now();
+    const assistantMessage: ChatMessage = {
+      role: 'assistant',
+      content: '',
+      timestamp: assistantMessageId,
+    };
+    
+    setMessages(prev => [...prev, assistantMessage]);
+
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/chat/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -45,8 +55,51 @@ export default function ChatPage() {
         throw new Error('Failed to send message');
       }
 
-      const data = await response.json();
-      setMessages(prev => [...prev, data.message]);
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let streamContent = '';
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                
+                if (data.error) {
+                  throw new Error(data.error);
+                }
+                
+                if (data.content) {
+                  streamContent += data.content;
+                  
+                  // Update the assistant message with streaming content
+                  setMessages(prev => 
+                    prev.map(msg => 
+                      msg.timestamp === assistantMessageId
+                        ? { ...msg, content: streamContent }
+                        : msg
+                    )
+                  );
+                }
+                
+                if (data.done) {
+                  break;
+                }
+              } catch (parseError) {
+                console.error('Error parsing stream data:', parseError);
+              }
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: ChatMessage = {
@@ -54,7 +107,7 @@ export default function ChatPage() {
         content: 'Sorry, I encountered an error. Please try again.',
         timestamp: Date.now(),
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev.slice(0, -1), errorMessage]);
     } finally {
       setLoading(false);
     }
@@ -73,6 +126,10 @@ export default function ChatPage() {
     setMessages([]);
   };
 
+  const newChat = () => {
+    setMessages([]);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
@@ -85,15 +142,23 @@ export default function ChatPage() {
                 Gemini Chat App
               </h1>
               <p className="text-sm text-gray-500">
-                Powered by Gemini 2.5 Pro with reasoning
+                Powered by Gemini 2.5 Flash with streaming
               </p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
             <button
+              onClick={newChat}
+              className="px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center space-x-1"
+              title="New chat"
+            >
+              <Plus size={18} />
+              <span className="text-sm font-medium">New Chat</span>
+            </button>
+            <button
               onClick={clearChat}
               className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Clear chat"
+              title="Clear current chat"
             >
               <Trash2 size={18} />
             </button>
@@ -115,14 +180,15 @@ export default function ChatPage() {
             <MessageSquare size={48} className="mx-auto mb-4 text-gray-300" />
             <h3 className="text-lg font-medium mb-2">Welcome to Gemini Chat</h3>
             <p className="text-sm">
-              Start a conversation with Gemini 2.5 Pro AI assistant.<br />
-              You can ask questions, request help with coding, math, or anything else!
+              Start a conversation with Gemini 2.5 Flash AI assistant.<br />
+              Messages stream in real-time! Ask anything you'd like to know.
             </p>
             <div className="mt-6 text-xs text-gray-400 space-y-1">
+              <p>⚡ Real-time streaming responses</p>
+              <p>💬 Remembers up to 10 previous messages</p>
               <p>✨ Supports Markdown formatting</p>
               <p>🔢 LaTeX math equations</p>
               <p>📊 Mermaid diagrams</p>
-              <p>🧠 Shows AI reasoning process</p>
             </div>
           </div>
         ) : (
