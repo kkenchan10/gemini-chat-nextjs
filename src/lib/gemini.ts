@@ -1,12 +1,14 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const API_KEY = process.env.GOOGLE_AI_API_KEY!;
-
-if (!API_KEY) {
-  throw new Error('GOOGLE_AI_API_KEY is not configured');
+function getGeminiClient() {
+  const API_KEY = process.env.GOOGLE_AI_API_KEY;
+  
+  if (!API_KEY) {
+    throw new Error('GOOGLE_AI_API_KEY is not configured');
+  }
+  
+  return new GoogleGenerativeAI(API_KEY);
 }
-
-const genAI = new GoogleGenerativeAI(API_KEY);
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -25,6 +27,8 @@ export async function sendMessageToGemini(
   history: ChatMessage[] = []
 ): Promise<GeminiResponse> {
   try {
+    const genAI = getGeminiClient();
+    
     // Use Gemini 2.5 Pro with thinking enabled
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-2.0-flash-thinking-exp-01262025',

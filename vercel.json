@@ -1,0 +1,14 @@
+{
+  "env": {
+    "GOOGLE_AI_API_KEY": "AIzaSyCyqxtOJPYTfwcc4pTqT00VAd6biBzPeyw",
+    "ADMIN_PASSWORD": "yusei",
+    "NEXTAUTH_SECRET": "super-secret-key-for-production-2024"
+  },
+  "build": {
+    "env": {
+      "GOOGLE_AI_API_KEY": "AIzaSyCyqxtOJPYTfwcc4pTqT00VAd6biBzPeyw",
+      "ADMIN_PASSWORD": "yusei", 
+      "NEXTAUTH_SECRET": "super-secret-key-for-production-2024"
+    }
+  }
+}
