@@ -24,10 +24,17 @@ async function chatHandler(request: NextRequest) {
       success: true 
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Chat API error:', error);
+    console.error('Chat API error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    const errorMessage = error.message || 'Failed to process chat message';
     return NextResponse.json(
-      { error: 'Failed to process chat message' }, 
+      { error: errorMessage }, 
       { status: 500 }
     );
   }

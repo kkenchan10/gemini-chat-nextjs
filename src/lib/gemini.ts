@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 function getGeminiClient() {
   const API_KEY = process.env.GOOGLE_AI_API_KEY;
@@ -7,7 +7,9 @@ function getGeminiClient() {
     throw new Error('GOOGLE_AI_API_KEY is not configured');
   }
   
-  return new GoogleGenerativeAI(API_KEY);
+  return new GoogleGenAI({
+    apiKey: API_KEY,
+  });
 }
 
 export interface ChatMessage {
@@ -27,39 +29,32 @@ export async function sendMessageToGemini(
   history: ChatMessage[] = []
 ): Promise<GeminiResponse> {
   try {
-    const genAI = getGeminiClient();
+    const ai = getGeminiClient();
     
-    // Use Gemini Pro model
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-pro',
-      generationConfig: {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: message,
+      config: {
         temperature: 0.7,
-        topP: 0.8,
-        topK: 40,
         maxOutputTokens: 8192,
       },
     });
 
-    // Build conversation history
-    const conversationHistory = history
-      .map(msg => `${msg.role}: ${msg.content}`)
-      .join('\n');
-
-    const fullPrompt = conversationHistory 
-      ? `${conversationHistory}\nuser: ${message}`
-      : `user: ${message}`;
-
-    const result = await model.generateContent(fullPrompt);
-    const response = await result.response;
-    const text = response.text();
-
     return {
-      response: text,
-      reasoning: undefined  // gemini-pro doesn't have reasoning mode
+      response: response.text || 'No response generated',
+      reasoning: undefined
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error calling Gemini API:', error);
-    throw new Error('Failed to get response from Gemini');
+    console.error('Error details:', {
+      message: error.message,
+      status: error.status,
+      code: error.code,
+      stack: error.stack
+    });
+    
+    const errorMessage = error.message || 'Failed to get response from Gemini';
+    throw new Error(`Gemini API Error: ${errorMessage}`);
   }
 }
 
