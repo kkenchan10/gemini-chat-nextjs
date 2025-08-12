@@ -26,24 +26,42 @@ export interface GeminiResponse {
 
 export async function sendMessageToGemini(
   message: string,
-  history: ChatMessage[] = []
+  history: ChatMessage[] = [],
+  systemPrompt: string = ''
 ): Promise<GeminiResponse> {
   try {
     const ai = getGeminiClient();
     
-    // Build conversation context from history
-    const conversationContext = history.length > 0 
-      ? history.slice(-10).map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`).join('\n') + '\n'
-      : '';
+    // Build conversation context
+    let fullPrompt = '';
     
-    const fullPrompt = conversationContext + `User: ${message}\nAssistant:`;
+    if (systemPrompt) {
+      fullPrompt += systemPrompt + '\n\n';
+    }
+    
+    // Add conversation history (last 10 messages)
+    if (history.length > 0) {
+      const recentHistory = history.slice(-10);
+      for (const msg of recentHistory) {
+        if (msg.role === 'user') {
+          fullPrompt += `人間: ${msg.content}\n`;
+        } else {
+          fullPrompt += `アシスタント: ${msg.content}\n`;
+        }
+      }
+    }
+    
+    fullPrompt += `人間: ${message}\nアシスタント: `;
     
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.5-pro',
       contents: fullPrompt,
       config: {
         temperature: 0.7,
         maxOutputTokens: 8192,
+        thinkingConfig: {
+          thinkingBudget: 8192,
+        },
       },
     });
 
@@ -68,24 +86,42 @@ export async function sendMessageToGemini(
 
 export async function* sendMessageToGeminiStream(
   message: string,
-  history: ChatMessage[] = []
+  history: ChatMessage[] = [],
+  systemPrompt: string = ''
 ): AsyncGenerator<string, void, unknown> {
   try {
     const ai = getGeminiClient();
     
-    // Build conversation context from history (last 10 messages)
-    const conversationContext = history.length > 0 
-      ? history.slice(-10).map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`).join('\n') + '\n'
-      : '';
+    // Build conversation context
+    let fullPrompt = '';
     
-    const fullPrompt = conversationContext + `User: ${message}\nAssistant:`;
+    if (systemPrompt) {
+      fullPrompt += systemPrompt + '\n\n';
+    }
+    
+    // Add conversation history (last 10 messages)
+    if (history.length > 0) {
+      const recentHistory = history.slice(-10);
+      for (const msg of recentHistory) {
+        if (msg.role === 'user') {
+          fullPrompt += `人間: ${msg.content}\n`;
+        } else {
+          fullPrompt += `アシスタント: ${msg.content}\n`;
+        }
+      }
+    }
+    
+    fullPrompt += `人間: ${message}\nアシスタント: `;
     
     const stream = await ai.models.generateContentStream({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.5-pro',
       contents: fullPrompt,
       config: {
         temperature: 0.7,
         maxOutputTokens: 8192,
+        thinkingConfig: {
+          thinkingBudget: 8192,
+        },
       },
     });
 

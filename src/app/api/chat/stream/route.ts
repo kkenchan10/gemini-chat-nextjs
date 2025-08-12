@@ -3,7 +3,7 @@ import { sendMessageToGeminiStream } from '@/lib/gemini';
 
 async function streamHandler(request: NextRequest) {
   try {
-    const { message, history } = await request.json();
+    const { message, history, systemPrompt } = await request.json();
 
     if (!message || typeof message !== 'string') {
       return Response.json({ error: 'Message is required' }, { status: 400 });
@@ -13,7 +13,7 @@ async function streamHandler(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of sendMessageToGeminiStream(message, history || [])) {
+          for await (const chunk of sendMessageToGeminiStream(message, history || [], systemPrompt || '')) {
             const data = JSON.stringify({ content: chunk, done: false });
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
           }

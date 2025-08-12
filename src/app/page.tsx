@@ -5,11 +5,41 @@ import { useRouter } from 'next/navigation';
 import { ChatMessage } from '@/lib/gemini';
 import MessageBubble from '@/components/MessageBubble';
 import ChatInput from '@/components/ChatInput';
-import { LogOut, Trash2, MessageSquare, Plus } from 'lucide-react';
+import SystemPromptModal from '@/components/SystemPromptModal';
+import { LogOut, Trash2, MessageSquare, Plus, Settings } from 'lucide-react';
+
+const DEFAULT_SYSTEM_PROMPT = `# 大学受験パートナーAI - システムプロンプト（共通テスト全教科＋岩手大学理系二次対応・数式強化）
+
+## 🎯 あなたの役割
+日本の大学受験を目指す高校3年生の  
+**最強の学習パートナー**です。  
+
+- 対応科目：  
+  **数学I・A / II・B / III**  
+  **物理・化学・生物・地学**  
+  **国語（現代文・古文・漢文）**  
+  **英語（リーディング・リスニング）**  
+  **社会（日本史・世界史・地理・公民）**  
+- 対応試験：**共通テスト全教科**、**国立岩手大学理系二次試験**  
+- 目的：ただ答えを教えるのではなく、**本質理解**と**応用力**を育てる
+
+## 💬 コミュニケーションスタイル
+- 丁寧で親しみやすい語り口調
+- 生徒のレベルに合わせた説明
+- 質問を促し、理解度を確認
+- ポジティブに励まし、学習意欲を向上
+- 段階的に展開
+
+## 🎯 最終目標
+生徒が**自分で考え、解ける力**を持ち  
+**共通テスト全教科**と**岩手大学二次試験**の両方で  
+**最大得点**を狙える実力を養成すること`;
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [systemPrompt, setSystemPrompt] = useState<string>(DEFAULT_SYSTEM_PROMPT);
+  const [isSystemPromptModalOpen, setIsSystemPromptModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -17,7 +47,13 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  useEffect(scrollToBottom, [messages]);
+  // Auto-scroll only when new messages are added, not during streaming updates
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [messages.length]);
 
   const handleSendMessage = async (content: string) => {
     const userMessage: ChatMessage = {
@@ -30,7 +66,7 @@ export default function ChatPage() {
     setLoading(true);
 
     // Create placeholder for streaming response
-    const assistantMessageId = Date.now();
+    const assistantMessageId = Date.now() + Math.random();
     const assistantMessage: ChatMessage = {
       role: 'assistant',
       content: '',
@@ -47,7 +83,8 @@ export default function ChatPage() {
         },
         body: JSON.stringify({
           message: content,
-          history: messages,
+          history: messages.slice(-10), // Only send last 10 messages to prevent context overflow
+          systemPrompt: systemPrompt,
         }),
       });
 
@@ -81,13 +118,27 @@ export default function ChatPage() {
                   streamContent += data.content;
                   
                   // Update the assistant message with streaming content
-                  setMessages(prev => 
-                    prev.map(msg => 
-                      msg.timestamp === assistantMessageId
-                        ? { ...msg, content: streamContent }
-                        : msg
-                    )
-                  );
+                  setMessages(prev => {
+                    const newMessages = [...prev];
+                    // Find the specific assistant message by timestamp, not just the last message
+                    const messageIndex = newMessages.findIndex(msg => 
+                      msg.timestamp === assistantMessageId && msg.role === 'assistant'
+                    );
+                    if (messageIndex !== -1) {
+                      newMessages[messageIndex] = {
+                        ...newMessages[messageIndex],
+                        content: streamContent
+                      };
+                    }
+                    return newMessages;
+                  });
+                  
+                  // Smooth auto-scroll during streaming
+                  if (streamContent.length % 100 === 0) { // Scroll every 100 characters for smoother experience
+                    requestAnimationFrame(() => {
+                      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    });
+                  }
                 }
                 
                 if (data.done) {
@@ -100,6 +151,11 @@ export default function ChatPage() {
           }
         }
       }
+      
+      // Final scroll to bottom after streaming completes
+      requestAnimationFrame(() => {
+        scrollToBottom();
+      });
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: ChatMessage = {
@@ -130,6 +186,19 @@ export default function ChatPage() {
     setMessages([]);
   };
 
+  const handleSystemPromptSave = (newPrompt: string) => {
+    setSystemPrompt(newPrompt);
+    localStorage.setItem('systemPrompt', newPrompt);
+  };
+
+  // Load system prompt from localStorage on mount
+  useEffect(() => {
+    const savedPrompt = localStorage.getItem('systemPrompt');
+    if (savedPrompt) {
+      setSystemPrompt(savedPrompt);
+    }
+  }, []);
+
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
@@ -142,7 +211,7 @@ export default function ChatPage() {
                 Gemini Chat App
               </h1>
               <p className="text-sm text-gray-500">
-                Powered by Gemini 2.5 Flash with streaming
+                Powered by Gemini 2.5-Pro with streaming & reasoning
               </p>
             </div>
           </div>
@@ -154,6 +223,13 @@ export default function ChatPage() {
             >
               <Plus size={18} />
               <span className="text-sm font-medium">New Chat</span>
+            </button>
+            <button
+              onClick={() => setIsSystemPromptModalOpen(true)}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              title="System prompt settings"
+            >
+              <Settings size={18} />
             </button>
             <button
               onClick={clearChat}
@@ -222,6 +298,14 @@ export default function ChatPage() {
         onSendMessage={handleSendMessage}
         disabled={loading}
         loading={loading}
+      />
+
+      {/* System Prompt Modal */}
+      <SystemPromptModal
+        isOpen={isSystemPromptModalOpen}
+        onClose={() => setIsSystemPromptModalOpen(false)}
+        systemPrompt={systemPrompt}
+        onSave={handleSystemPromptSave}
       />
     </div>
   );
