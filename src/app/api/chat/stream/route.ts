@@ -1,6 +1,5 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { sendMessageToGeminiStream } from '@/lib/gemini';
-import { withAuth } from '@/lib/auth';
 
 async function streamHandler(request: NextRequest) {
   try {
@@ -52,4 +51,13 @@ async function streamHandler(request: NextRequest) {
   }
 }
 
-export const POST = withAuth(streamHandler);
+export async function POST(request: NextRequest) {
+  // Simple auth check for streaming endpoint
+  const authCookie = request.cookies.get('gemini-chat-auth');
+  
+  if (!authCookie || authCookie.value !== 'authenticated') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  return streamHandler(request);
+}
