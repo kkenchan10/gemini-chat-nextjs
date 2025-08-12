@@ -41,6 +41,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
           ),
           
           // Style code blocks
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           code: ({ inline, className, children, ...props }: any) => {
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : '';

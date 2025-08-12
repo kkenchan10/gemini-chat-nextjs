@@ -62,6 +62,7 @@ export default function MermaidRenderer({ chart }: MermaidRendererProps) {
         } else {
           setError('Invalid Mermaid syntax');
         }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         console.error('Mermaid render error:', err);
         setError(err.message || 'Failed to render Mermaid chart');
