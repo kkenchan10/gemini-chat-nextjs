@@ -24,6 +24,7 @@ async function chatHandler(request: NextRequest) {
       success: true 
     });
     
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error('Chat API error:', error);
     console.error('Chat API error details:', {

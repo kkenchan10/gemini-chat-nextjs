@@ -26,6 +26,7 @@ export interface GeminiResponse {
 
 export async function sendMessageToGemini(
   message: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   history: ChatMessage[] = []
 ): Promise<GeminiResponse> {
   try {
@@ -44,6 +45,7 @@ export async function sendMessageToGemini(
       response: response.text || 'No response generated',
       reasoning: undefined
     };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error('Error calling Gemini API:', error);
     console.error('Error details:', {
