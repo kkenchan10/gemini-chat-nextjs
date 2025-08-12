@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { sendMessageToGeminiStream, ChatMessage } from '@/lib/gemini';
+import { sendMessageToGeminiStream } from '@/lib/gemini';
 import { withAuth } from '@/lib/auth';
 
 async function streamHandler(request: NextRequest) {

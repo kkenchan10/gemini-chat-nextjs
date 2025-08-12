@@ -181,7 +181,7 @@ export default function ChatPage() {
             <h3 className="text-lg font-medium mb-2">Welcome to Gemini Chat</h3>
             <p className="text-sm">
               Start a conversation with Gemini 2.5 Flash AI assistant.<br />
-              Messages stream in real-time! Ask anything you'd like to know.
+              Messages stream in real-time! Ask anything you&apos;d like to know.
             </p>
             <div className="mt-6 text-xs text-gray-400 space-y-1">
               <p>⚡ Real-time streaming responses</p>
