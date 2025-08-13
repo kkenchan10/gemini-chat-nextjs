@@ -28,7 +28,8 @@ export async function sendMessageToGemini(
   message: string,
   history: ChatMessage[] = [],
   systemPrompt: string = '',
-  model: string = 'gemini-2.5-flash'
+  model: string = 'gemini-2.5-flash',
+  thinkingBudget: number = 8192
 ): Promise<GeminiResponse> {
   try {
     const ai = getGeminiClient();
@@ -62,13 +63,34 @@ export async function sendMessageToGemini(
       config: {
         temperature: 0.7,
         maxOutputTokens: 8192,
+        thinkingConfig: {
+          includeThoughts: true,
+          ...(thinkingBudget > 0 ? { thinkingBudget } : {}),
+        },
       },
     });
 
-    return {
-      response: response.text || 'No response generated',
+    // Extract thoughts and response from parts
+    let responseText = '';
+    let thoughts = '';
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((response as any).candidates && (response as any).candidates[0]?.content?.parts) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      reasoning: (response as any).thinkingTrace || undefined
+      for (const part of (response as any).candidates[0].content.parts) {
+        if (!part.text) continue;
+        
+        if (part.thought) {
+          thoughts += part.text;
+        } else {
+          responseText += part.text;
+        }
+      }
+    }
+
+    return {
+      response: responseText || response.text || 'No response generated',
+      reasoning: thoughts || undefined
     };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
@@ -89,7 +111,8 @@ export async function* sendMessageToGeminiStream(
   message: string,
   history: ChatMessage[] = [],
   systemPrompt: string = '',
-  model: string = 'gemini-2.5-flash'
+  model: string = 'gemini-2.5-flash',
+  thinkingBudget: number = 8192
 ): AsyncGenerator<{text?: string; thinking?: string; done?: boolean}, void, unknown> {
   try {
     const ai = getGeminiClient();
@@ -123,19 +146,34 @@ export async function* sendMessageToGeminiStream(
       config: {
         temperature: 0.7,
         maxOutputTokens: 8192,
+        thinkingConfig: {
+          includeThoughts: true,
+          ...(thinkingBudget > 0 ? { thinkingBudget } : {}),
+        },
       },
     });
 
     for await (const chunk of stream) {
       console.log('Received chunk:', chunk);
+      
+      // Process parts according to official Gemini API
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if ((chunk as any).thinkingTrace) {
+      if ((chunk as any).candidates && (chunk as any).candidates[0]?.content?.parts) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        console.log('Thinking trace found:', (chunk as any).thinkingTrace);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        yield { thinking: (chunk as any).thinkingTrace };
+        for (const part of (chunk as any).candidates[0].content.parts) {
+          if (!part.text) continue;
+          
+          if (part.thought) {
+            console.log('Thinking found:', part.text);
+            yield { thinking: part.text };
+          } else {
+            console.log('Response text found:', part.text);
+            yield { text: part.text };
+          }
+        }
       }
-      if (chunk.text) {
+      // Fallback for simple text response (backward compatibility)
+      else if (chunk.text) {
         yield { text: chunk.text };
       }
     }
