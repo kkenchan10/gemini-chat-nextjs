@@ -64,7 +64,8 @@ export async function sendMessageToGemini(
 
     return {
       response: response.text || 'No response generated',
-      reasoning: response.thinkingTrace || undefined
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      reasoning: (response as any).thinkingTrace || undefined
     };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
@@ -120,8 +121,10 @@ export async function* sendMessageToGeminiStream(
     });
 
     for await (const chunk of stream) {
-      if (chunk.thinkingTrace) {
-        yield { thinking: chunk.thinkingTrace };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((chunk as any).thinkingTrace) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        yield { thinking: (chunk as any).thinkingTrace };
       }
       if (chunk.text) {
         yield { text: chunk.text };
