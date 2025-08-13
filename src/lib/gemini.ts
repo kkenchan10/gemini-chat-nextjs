@@ -31,8 +31,13 @@ export async function sendMessageToGemini(
   model: string = 'gemini-2.5-flash',
   thinkingBudget: number = 8192
 ): Promise<GeminiResponse> {
-  try {
-    const ai = getGeminiClient();
+  let attempts = 0;
+  const maxRetries = model.includes('2.5-pro') ? 3 : 1; // More retries for Pro model
+  
+  while (attempts < maxRetries) {
+    try {
+      attempts++;
+      const ai = getGeminiClient();
     
     // Build conversation context
     let fullPrompt = '';
@@ -41,15 +46,19 @@ export async function sendMessageToGemini(
       fullPrompt += systemPrompt + '\n\n';
     }
     
-    // Add conversation history (last 10 messages)
+    // Add conversation history (reduce for 2.5-Pro to avoid context limit)
     if (history.length > 0) {
-      const recentHistory = history.slice(-10);
-      console.log('Processing history:', recentHistory.length, 'messages');
+      const historyLimit = model.includes('2.5-pro') ? 5 : 10; // Reduce history for Pro model
+      const recentHistory = history.slice(-historyLimit);
+      console.log('Processing history:', recentHistory.length, 'messages for', model);
+      
       for (const msg of recentHistory) {
+        // Truncate very long messages to prevent context overflow
+        const content = msg.content.length > 1000 ? msg.content.substring(0, 1000) + '...' : msg.content;
         if (msg.role === 'user') {
-          fullPrompt += `人間: ${msg.content}\n`;
+          fullPrompt += `人間: ${content}\n`;
         } else if (msg.role === 'assistant') {
-          fullPrompt += `アシスタント: ${msg.content}\n`;
+          fullPrompt += `アシスタント: ${content}\n`;
         }
       }
     }
@@ -88,22 +97,32 @@ export async function sendMessageToGemini(
       }
     }
 
-    return {
-      response: responseText || response.text || 'No response generated',
-      reasoning: thoughts || undefined
-    };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    console.error('Error calling Gemini API:', error);
-    console.error('Error details:', {
-      message: error.message,
-      status: error.status,
-      code: error.code,
-      stack: error.stack
-    });
-    
-    const errorMessage = error.message || 'Failed to get response from Gemini';
-    throw new Error(`Gemini API Error: ${errorMessage}`);
+      return {
+        response: responseText || response.text || 'No response generated',
+        reasoning: thoughts || undefined
+      };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.error(`Gemini API attempt ${attempts}/${maxRetries} failed:`, error);
+      
+      if (attempts >= maxRetries) {
+        console.error('All retry attempts failed');
+        console.error('Error details:', {
+          message: error.message,
+          status: error.status,
+          code: error.code,
+          stack: error.stack
+        });
+        
+        const errorMessage = error.message || 'Failed to get response from Gemini';
+        throw new Error(`Gemini API Error: ${errorMessage}`);
+      }
+      
+      // Wait before retry (exponential backoff)
+      const waitTime = Math.pow(2, attempts) * 1000; // 2s, 4s, 8s
+      console.log(`Waiting ${waitTime}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
   }
 }
 
@@ -114,8 +133,13 @@ export async function* sendMessageToGeminiStream(
   model: string = 'gemini-2.5-flash',
   thinkingBudget: number = 8192
 ): AsyncGenerator<{text?: string; thinking?: string; done?: boolean}, void, unknown> {
-  try {
-    const ai = getGeminiClient();
+  let attempts = 0;
+  const maxRetries = model.includes('2.5-pro') ? 3 : 1; // More retries for Pro model
+  
+  while (attempts < maxRetries) {
+    try {
+      attempts++;
+      const ai = getGeminiClient();
     
     // Build conversation context
     let fullPrompt = '';
@@ -124,15 +148,19 @@ export async function* sendMessageToGeminiStream(
       fullPrompt += systemPrompt + '\n\n';
     }
     
-    // Add conversation history (last 10 messages)
+    // Add conversation history (reduce for 2.5-Pro to avoid context limit)
     if (history.length > 0) {
-      const recentHistory = history.slice(-10);
-      console.log('Stream - Processing history:', recentHistory.length, 'messages');
+      const historyLimit = model.includes('2.5-pro') ? 5 : 10; // Reduce history for Pro model
+      const recentHistory = history.slice(-historyLimit);
+      console.log('Stream - Processing history:', recentHistory.length, 'messages for', model);
+      
       for (const msg of recentHistory) {
+        // Truncate very long messages to prevent context overflow
+        const content = msg.content.length > 1000 ? msg.content.substring(0, 1000) + '...' : msg.content;
         if (msg.role === 'user') {
-          fullPrompt += `人間: ${msg.content}\n`;
+          fullPrompt += `人間: ${content}\n`;
         } else if (msg.role === 'assistant') {
-          fullPrompt += `アシスタント: ${msg.content}\n`;
+          fullPrompt += `アシスタント: ${content}\n`;
         }
       }
     }
@@ -176,12 +204,23 @@ export async function* sendMessageToGeminiStream(
       else if (chunk.text) {
         yield { text: chunk.text };
       }
+      }
+      yield { done: true };
+      return; // Success, exit retry loop
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.error(`Gemini Streaming API attempt ${attempts}/${maxRetries} failed:`, error);
+      
+      if (attempts >= maxRetries) {
+        console.error('All retry attempts failed');
+        throw new Error(`Gemini Streaming API Error: ${error.message || 'Unknown error'}`);
+      }
+      
+      // Wait before retry (exponential backoff)
+      const waitTime = Math.pow(2, attempts) * 1000; // 2s, 4s, 8s
+      console.log(`Waiting ${waitTime}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
     }
-    yield { done: true };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    console.error('Error calling Gemini Streaming API:', error);
-    throw new Error(`Gemini Streaming API Error: ${error.message || 'Unknown error'}`);
   }
 }
 
