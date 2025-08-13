@@ -4,8 +4,15 @@ import { sendMessageToGeminiStream } from '@/lib/gemini';
 async function streamHandler(request: NextRequest) {
   try {
     const { message, history, systemPrompt } = await request.json();
+    
+    console.log('Received request:', {
+      messageLength: message?.length,
+      historyCount: Array.isArray(history) ? history.length : 0,
+      hasSystemPrompt: !!systemPrompt
+    });
 
     if (!message || typeof message !== 'string') {
+      console.error('Invalid message:', message);
       return Response.json({ error: 'Message is required' }, { status: 400 });
     }
 

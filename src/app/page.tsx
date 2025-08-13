@@ -67,6 +67,8 @@ export default function ChatPage() {
     setMessages(prev => [...prev, userMessage]);
     setLoading(true);
 
+    console.log('Sending message with history:', messages.length, 'previous messages');
+
     // Create placeholder for streaming response
     const assistantMessageId = Date.now() + Math.random();
     const assistantMessage: ChatMessage = {
@@ -85,13 +87,15 @@ export default function ChatPage() {
         },
         body: JSON.stringify({
           message: content,
-          history: messages.slice(-10), // Only send last 10 messages to prevent context overflow
+          history: messages.slice(-10).filter(msg => msg.content && msg.content.trim().length > 0), // Filter empty messages
           systemPrompt: systemPrompt,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        const errorText = await response.text();
+        console.error('API Error:', response.status, errorText);
+        throw new Error(`Failed to send message: ${response.status} ${errorText}`);
       }
 
       const reader = response.body?.getReader();

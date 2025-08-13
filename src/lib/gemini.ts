@@ -42,16 +42,18 @@ export async function sendMessageToGemini(
     // Add conversation history (last 10 messages)
     if (history.length > 0) {
       const recentHistory = history.slice(-10);
+      console.log('Processing history:', recentHistory.length, 'messages');
       for (const msg of recentHistory) {
         if (msg.role === 'user') {
           fullPrompt += `人間: ${msg.content}\n`;
-        } else {
+        } else if (msg.role === 'assistant') {
           fullPrompt += `アシスタント: ${msg.content}\n`;
         }
       }
     }
     
     fullPrompt += `人間: ${message}\nアシスタント: `;
+    console.log('Full prompt length:', fullPrompt.length);
     
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-pro',
@@ -100,16 +102,18 @@ export async function* sendMessageToGeminiStream(
     // Add conversation history (last 10 messages)
     if (history.length > 0) {
       const recentHistory = history.slice(-10);
+      console.log('Stream - Processing history:', recentHistory.length, 'messages');
       for (const msg of recentHistory) {
         if (msg.role === 'user') {
           fullPrompt += `人間: ${msg.content}\n`;
-        } else {
+        } else if (msg.role === 'assistant') {
           fullPrompt += `アシスタント: ${msg.content}\n`;
         }
       }
     }
     
     fullPrompt += `人間: ${message}\nアシスタント: `;
+    console.log('Stream - Full prompt length:', fullPrompt.length);
     
     const stream = await ai.models.generateContentStream({
       model: 'gemini-2.5-pro',
