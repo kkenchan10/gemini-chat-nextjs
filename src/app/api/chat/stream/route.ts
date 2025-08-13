@@ -14,13 +14,20 @@ async function streamHandler(request: NextRequest) {
       async start(controller) {
         try {
           for await (const chunk of sendMessageToGeminiStream(message, history || [], systemPrompt || '')) {
-            const data = JSON.stringify({ content: chunk, done: false });
-            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            if (chunk.thinking) {
+              const thinkingData = JSON.stringify({ thinking: chunk.thinking, done: false });
+              controller.enqueue(encoder.encode(`data: ${thinkingData}\n\n`));
+            }
+            if (chunk.text) {
+              const textData = JSON.stringify({ content: chunk.text, done: false });
+              controller.enqueue(encoder.encode(`data: ${textData}\n\n`));
+            }
+            if (chunk.done) {
+              const completeData = JSON.stringify({ content: '', done: true });
+              controller.enqueue(encoder.encode(`data: ${completeData}\n\n`));
+              break;
+            }
           }
-          
-          // Send completion signal
-          const completeData = JSON.stringify({ content: '', done: true });
-          controller.enqueue(encoder.encode(`data: ${completeData}\n\n`));
           
           controller.close();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

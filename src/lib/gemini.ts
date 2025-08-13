@@ -54,20 +54,17 @@ export async function sendMessageToGemini(
     fullPrompt += `人間: ${message}\nアシスタント: `;
     
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-pro',
+      model: 'gemini-1.5-pro-latest',
       contents: fullPrompt,
       config: {
         temperature: 0.7,
         maxOutputTokens: 8192,
-        thinkingConfig: {
-          thinkingBudget: 8192,
-        },
       },
     });
 
     return {
       response: response.text || 'No response generated',
-      reasoning: undefined
+      reasoning: response.thinkingTrace || undefined
     };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
@@ -88,7 +85,7 @@ export async function* sendMessageToGeminiStream(
   message: string,
   history: ChatMessage[] = [],
   systemPrompt: string = ''
-): AsyncGenerator<string, void, unknown> {
+): AsyncGenerator<{text?: string; thinking?: string; done?: boolean}, void, unknown> {
   try {
     const ai = getGeminiClient();
     
@@ -114,22 +111,23 @@ export async function* sendMessageToGeminiStream(
     fullPrompt += `人間: ${message}\nアシスタント: `;
     
     const stream = await ai.models.generateContentStream({
-      model: 'gemini-2.5-pro',
+      model: 'gemini-1.5-pro-latest',
       contents: fullPrompt,
       config: {
         temperature: 0.7,
         maxOutputTokens: 8192,
-        thinkingConfig: {
-          thinkingBudget: 8192,
-        },
       },
     });
 
     for await (const chunk of stream) {
+      if (chunk.thinkingTrace) {
+        yield { thinking: chunk.thinkingTrace };
+      }
       if (chunk.text) {
-        yield chunk.text;
+        yield { text: chunk.text };
       }
     }
+    yield { done: true };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error('Error calling Gemini Streaming API:', error);

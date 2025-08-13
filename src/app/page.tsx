@@ -6,7 +6,7 @@ import { ChatMessage } from '@/lib/gemini';
 import MessageBubble from '@/components/MessageBubble';
 import ChatInput from '@/components/ChatInput';
 import SystemPromptModal from '@/components/SystemPromptModal';
-import { LogOut, Trash2, MessageSquare, Plus, Settings } from 'lucide-react';
+import { LogOut, Trash2, MessageSquare, Plus, Settings, TestTube, Brain } from 'lucide-react';
 
 const DEFAULT_SYSTEM_PROMPT = `# 大学受験パートナーAI - システムプロンプト（共通テスト全教科＋岩手大学理系二次対応・数式強化）
 
@@ -40,6 +40,8 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState<string>(DEFAULT_SYSTEM_PROMPT);
   const [isSystemPromptModalOpen, setIsSystemPromptModalOpen] = useState(false);
+  const [thinkingTrace, setThinkingTrace] = useState<string>('');
+  const [showThinking, setShowThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -114,6 +116,10 @@ export default function ChatPage() {
                   throw new Error(data.error);
                 }
                 
+                if (data.thinking) {
+                  setThinkingTrace(data.thinking);
+                }
+                
                 if (data.content) {
                   streamContent += data.content;
                   
@@ -127,7 +133,8 @@ export default function ChatPage() {
                     if (messageIndex !== -1) {
                       newMessages[messageIndex] = {
                         ...newMessages[messageIndex],
-                        content: streamContent
+                        content: streamContent,
+                        reasoning: thinkingTrace || newMessages[messageIndex].reasoning
                       };
                     }
                     return newMessages;
@@ -156,6 +163,9 @@ export default function ChatPage() {
       requestAnimationFrame(() => {
         scrollToBottom();
       });
+      
+      // Clear thinking trace
+      setThinkingTrace('');
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: ChatMessage = {
@@ -184,6 +194,12 @@ export default function ChatPage() {
 
   const newChat = () => {
     setMessages([]);
+    setThinkingTrace('');
+  };
+
+  const testStreaming = async () => {
+    const testMessage = "簡単な数学の問題を出してください。解き方も含めて説明してください。";
+    await handleSendMessage(testMessage);
   };
 
   const handleSystemPromptSave = (newPrompt: string) => {
@@ -211,7 +227,7 @@ export default function ChatPage() {
                 Gemini Chat App
               </h1>
               <p className="text-sm text-gray-500">
-                Powered by Gemini 2.5-Pro with streaming & reasoning
+                Powered by Gemini 1.5-Pro with streaming & reasoning
               </p>
             </div>
           </div>
@@ -223,6 +239,26 @@ export default function ChatPage() {
             >
               <Plus size={18} />
               <span className="text-sm font-medium">New Chat</span>
+            </button>
+            <button
+              onClick={testStreaming}
+              className="px-3 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors flex items-center space-x-1"
+              title="Test streaming"
+              disabled={loading}
+            >
+              <TestTube size={16} />
+              <span className="text-sm font-medium">テスト</span>
+            </button>
+            <button
+              onClick={() => setShowThinking(!showThinking)}
+              className={`p-2 transition-colors rounded-lg ${
+                showThinking 
+                  ? 'text-purple-600 bg-purple-50 hover:bg-purple-100' 
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              }`}
+              title="Toggle thinking display"
+            >
+              <Brain size={18} />
             </button>
             <button
               onClick={() => setIsSystemPromptModalOpen(true)}
@@ -248,6 +284,19 @@ export default function ChatPage() {
           </div>
         </div>
       </header>
+
+      {/* Thinking Display */}
+      {showThinking && thinkingTrace && (
+        <div className="bg-purple-50 border-b border-purple-200 p-3">
+          <div className="flex items-center space-x-2 mb-2">
+            <Brain size={16} className="text-purple-600" />
+            <span className="text-sm font-medium text-purple-800">推論中...</span>
+          </div>
+          <div className="text-xs text-purple-700 bg-white rounded p-2 max-h-20 overflow-y-auto font-mono">
+            {thinkingTrace}
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
