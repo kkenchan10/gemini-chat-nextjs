@@ -27,7 +27,8 @@ export interface GeminiResponse {
 export async function sendMessageToGemini(
   message: string,
   history: ChatMessage[] = [],
-  systemPrompt: string = ''
+  systemPrompt: string = '',
+  model: string = 'gemini-2.5-flash'
 ): Promise<GeminiResponse> {
   try {
     const ai = getGeminiClient();
@@ -56,7 +57,7 @@ export async function sendMessageToGemini(
     console.log('Full prompt length:', fullPrompt.length);
     
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: model,
       contents: fullPrompt,
       config: {
         temperature: 0.7,
@@ -87,7 +88,8 @@ export async function sendMessageToGemini(
 export async function* sendMessageToGeminiStream(
   message: string,
   history: ChatMessage[] = [],
-  systemPrompt: string = ''
+  systemPrompt: string = '',
+  model: string = 'gemini-2.5-flash'
 ): AsyncGenerator<{text?: string; thinking?: string; done?: boolean}, void, unknown> {
   try {
     const ai = getGeminiClient();
@@ -116,7 +118,7 @@ export async function* sendMessageToGeminiStream(
     console.log('Stream - Full prompt length:', fullPrompt.length);
     
     const stream = await ai.models.generateContentStream({
-      model: 'gemini-2.5-flash',
+      model: model,
       contents: fullPrompt,
       config: {
         temperature: 0.7,
@@ -125,8 +127,11 @@ export async function* sendMessageToGeminiStream(
     });
 
     for await (const chunk of stream) {
+      console.log('Received chunk:', chunk);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((chunk as any).thinkingTrace) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        console.log('Thinking trace found:', (chunk as any).thinkingTrace);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         yield { thinking: (chunk as any).thinkingTrace };
       }

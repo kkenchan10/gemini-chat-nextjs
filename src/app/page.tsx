@@ -42,6 +42,7 @@ export default function ChatPage() {
   const [isSystemPromptModalOpen, setIsSystemPromptModalOpen] = useState(false);
   const [thinkingTrace, setThinkingTrace] = useState<string>('');
   const [showThinking, setShowThinking] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -89,6 +90,7 @@ export default function ChatPage() {
           message: content,
           history: messages.slice(-10).filter(msg => msg.content && msg.content.trim().length > 0), // Filter empty messages
           systemPrompt: systemPrompt,
+          model: selectedModel,
         }),
       });
 
@@ -231,11 +233,21 @@ export default function ChatPage() {
                 Gemini Chat App
               </h1>
               <p className="text-sm text-gray-500">
-                Powered by Gemini 2.5-Flash with streaming & adaptive thinking
+                Powered by {selectedModel.replace('gemini-', 'Gemini ').replace('-', '.')} with streaming
               </p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="gemini-2.5-flash">Gemini 2.5-Flash</option>
+              <option value="gemini-2.5-pro">Gemini 2.5-Pro</option>
+              <option value="gemini-1.5-flash">Gemini 1.5-Flash</option>
+              <option value="gemini-1.5-pro">Gemini 1.5-Pro</option>
+            </select>
             <button
               onClick={newChat}
               className="px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center space-x-1"

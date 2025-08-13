@@ -3,12 +3,13 @@ import { sendMessageToGeminiStream } from '@/lib/gemini';
 
 async function streamHandler(request: NextRequest) {
   try {
-    const { message, history, systemPrompt } = await request.json();
+    const { message, history, systemPrompt, model } = await request.json();
     
     console.log('Received request:', {
       messageLength: message?.length,
       historyCount: Array.isArray(history) ? history.length : 0,
-      hasSystemPrompt: !!systemPrompt
+      hasSystemPrompt: !!systemPrompt,
+      model: model || 'gemini-2.5-flash'
     });
 
     if (!message || typeof message !== 'string') {
@@ -20,7 +21,7 @@ async function streamHandler(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of sendMessageToGeminiStream(message, history || [], systemPrompt || '')) {
+          for await (const chunk of sendMessageToGeminiStream(message, history || [], systemPrompt || '', model || 'gemini-2.5-flash')) {
             if (chunk.thinking) {
               const thinkingData = JSON.stringify({ thinking: chunk.thinking, done: false });
               controller.enqueue(encoder.encode(`data: ${thinkingData}\n\n`));
