@@ -56,7 +56,7 @@ export async function sendMessageToGemini(
     console.log('Full prompt length:', fullPrompt.length);
     
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-pro',
+      model: 'gemini-2.5-flash',
       contents: fullPrompt,
       config: {
         temperature: 0.7,
@@ -116,7 +116,7 @@ export async function* sendMessageToGeminiStream(
     console.log('Stream - Full prompt length:', fullPrompt.length);
     
     const stream = await ai.models.generateContentStream({
-      model: 'gemini-2.5-pro',
+      model: 'gemini-2.5-flash',
       contents: fullPrompt,
       config: {
         temperature: 0.7,
