@@ -124,6 +124,9 @@ export async function sendMessageToGemini(
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
   }
+  
+  // This should never be reached due to throw in catch block, but TypeScript requires it
+  throw new Error('Gemini API Error: All retry attempts failed');
 }
 
 export async function* sendMessageToGeminiStream(
