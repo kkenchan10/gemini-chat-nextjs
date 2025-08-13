@@ -54,7 +54,7 @@ export async function sendMessageToGemini(
     fullPrompt += `人間: ${message}\nアシスタント: `;
     
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-pro-latest',
+      model: 'gemini-2.5-pro',
       contents: fullPrompt,
       config: {
         temperature: 0.7,
@@ -112,7 +112,7 @@ export async function* sendMessageToGeminiStream(
     fullPrompt += `人間: ${message}\nアシスタント: `;
     
     const stream = await ai.models.generateContentStream({
-      model: 'gemini-1.5-pro-latest',
+      model: 'gemini-2.5-pro',
       contents: fullPrompt,
       config: {
         temperature: 0.7,

@@ -227,7 +227,7 @@ export default function ChatPage() {
                 Gemini Chat App
               </h1>
               <p className="text-sm text-gray-500">
-                Powered by Gemini 1.5-Pro with streaming & reasoning
+                Powered by Gemini 2.5-Pro with streaming & reasoning
               </p>
             </div>
           </div>
